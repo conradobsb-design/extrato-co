@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    @apply bg-[#0f0f0f] text-white font-sans min-h-screen;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
+}
+
+@layer components {
+  .card {
+    @apply bg-[#1a1a1a] rounded-2xl border border-white/5 p-5;
+  }
+  .card-sm {
+    @apply bg-[#1a1a1a] rounded-xl border border-white/5 p-4;
+  }
+  .btn-primary {
+    @apply bg-green-500 hover:bg-green-400 text-black font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply bg-white/5 hover:bg-white/10 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-95;
+  }
+  .input {
+    @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/30 transition-all w-full;
+  }
+  .chip {
+    @apply px-3 py-1 rounded-full text-xs font-medium;
+  }
+  .income { @apply text-green-400; }
+  .expense { @apply text-red-400; }
+  .savings { @apply text-blue-400; }
+}
