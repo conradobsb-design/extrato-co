@@ -6,6 +6,14 @@ App de gestão financeira pessoal **dopaminérgico**: combina controle financeir
 
 **Diferencial central:** importação automática de extratos e faturas bancárias brasileiras via IA (Claude), sem planilhas, sem trabalho manual.
 
+**O que significa "dopaminérgico" neste contexto (critérios concretos):**
+- Streak de dias consecutivos de acesso visível no header
+- Animação de celebração (confetti ou pulse verde) ao atingir 100% de uma meta
+- Cores positivas dominam: verde para receita/meta cumprida, vermelho só aparece quando necessário
+- Transições suaves em todas as mudanças de estado (Framer Motion, duration ≤ 300ms)
+- Feedback imediato após importação: contador animado de transações processadas
+- Sem telas de erro vazias — sempre há uma ação sugerida
+
 ---
 
 ## Stack recomendada
@@ -75,12 +83,17 @@ CREATE TABLE goals (
   emoji          TEXT DEFAULT '🎯',
   type           TEXT,                    -- 'save_amount' | 'reduce_category'
   target_amount  NUMERIC NOT NULL,
-  current_amount NUMERIC DEFAULT 0,
+  current_amount NUMERIC DEFAULT 0,      -- atualizado MANUALMENTE pelo usuário via UI (V1)
   category       TEXT,
   status         TEXT DEFAULT 'active',  -- 'active' | 'done' | 'archived'
   deadline       DATE,
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- DECISÃO: current_amount é preenchido pelo usuário no GoalCard (input manual).
+-- Cálculo automático a partir de transações por categoria é funcionalidade V2.
+-- Quando type = 'reduce_category': current_amount = total gasto nessa categoria no mês.
+-- Essa agregação automática só entra na V2 junto com o detector de assinaturas.
 ```
 
 ### RLS (Row Level Security) — SEMPRE ativar
@@ -156,6 +169,10 @@ serve(async (req) => {
 - Transações internacionais: usar sempre valor em R$
 - IGNORAR: totais, encargos, IOF, juros, anuidade, tarifas
 
+**Regra de `billing_month` por tipo:**
+- `source_type = 'credit_card'`: preencher com `YYYY-MM` do mês da fatura (ex: `"2024-04"`)
+- `source_type = 'bank'` ou `'investment'`: sempre `null` — extratos bancários não têm mês de fatura
+
 ### ai-chat (Clara — consultora financeira IA)
 
 **Persona:** Clara, CFO amiga — direta, acolhedora, sem jargão. Celebra conquistas, honesta com problemas, nunca alarmista.
@@ -166,6 +183,15 @@ serve(async (req) => {
 - Trimestre e ano acumulados
 - Metas e progresso
 - Streak de uso
+
+**Responsabilidade do contexto:**
+O frontend é responsável por agregar e enviar o contexto completo já calculado. A Edge Function `ai-chat` recebe dados prontos — não faz queries no banco. Fluxo:
+1. `useTransactions(userId, currentMonth)` → summary do mês atual
+2. `useTransactions(userId, prevMonth)` → summary do mês anterior
+3. Frontend calcula `% variação` e monta o objeto `context`
+4. Envia tudo para `ai-chat` em uma única chamada
+
+Isso mantém a Edge Function simples e sem lógica de agregação.
 
 **Regra de fallback:** quando mês atual tem dados zerados, analisar trimestre/ano disponíveis — nunca dizer "de mãos atadas".
 
@@ -235,6 +261,9 @@ const classifyTransaction = (item) => {
 - [ ] Metas financeiras com progresso
 - [ ] Detector de assinaturas recorrentes (apenas serviços conhecidos — Netflix, Spotify, academias, etc.)
 - [ ] Modo multiusuário / família (compartilhamento de conta)
+
+**Decisão de modelagem — multiusuário V2:**
+Contas separadas com visão consolidada via convite. Cada usuário mantém seu próprio `user_id` e suas próprias transações. Um `family_group` vincula membros e permite uma view agregada. Nunca login compartilhado — viola isolamento de dados e RLS. Nova tabela necessária: `family_groups` + `family_members`. Escopo V2, não antecipar.
 
 ### V3 (monetização)
 - [ ] Planos (Essencial / Private / Family Office)
