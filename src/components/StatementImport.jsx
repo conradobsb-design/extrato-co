@@ -4,7 +4,7 @@ import { Upload, FileText, CheckCircle2, AlertCircle, X, Loader2 } from 'lucide-
 import { useApp } from '../contexts/AppContext'
 import { supabase } from '../lib/supabase'
 
-const PARSE_URL = 'https://YOUR_PROJECT.supabase.co/functions/v1/parse-statement'
+const PARSE_URL = 'https://zifouatrpgupggyddloe.supabase.co/functions/v1/parse-statement'
 
 const BANKS = [
   { value: 'itau', label: 'Itaú' },
