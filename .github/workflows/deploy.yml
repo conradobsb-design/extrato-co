@@ -1,0 +1,25 @@
+name: Deploy → Coolify restart
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  restart-after-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aguardar Coolify buildar (~3 min)
+        run: sleep 180
+
+      - name: Reiniciar app no Coolify (fix Traefik routing)
+        run: |
+          curl -s -X POST "${{ secrets.COOLIFY_URL }}/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/restart" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            -H "Content-Type: application/json"
+
+      - name: Verificar app online
+        run: |
+          sleep 20
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.APP_URL }}")
+          echo "HTTP status: $STATUS"
+          [ "$STATUS" = "200" ] && echo "✅ App online!" || echo "⚠️ Verificar manualmente"
