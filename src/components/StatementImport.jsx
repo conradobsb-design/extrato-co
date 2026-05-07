@@ -26,13 +26,22 @@ async function extractPdfText(file) {
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-  let text = ''
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const content = await page.getTextContent()
-    text += content.items.map(item => item.str).join(' ') + '\n'
-  }
-  return text
+
+  // Extrai todas as páginas em paralelo (era sequencial — principal gargalo)
+  const pageTexts = await Promise.all(
+    Array.from({ length: pdf.numPages }, (_, i) =>
+      pdf.getPage(i + 1)
+        .then(page => page.getTextContent())
+        .then(content => content.items.map(item => item.str).join(' '))
+    )
+  )
+
+  // Limpa o texto antes de enviar: remove espaços duplicados e linhas vazias
+  return pageTexts
+    .join('\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 export default function StatementImport({ onSuccess, onClose }) {

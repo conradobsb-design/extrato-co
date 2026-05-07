@@ -75,14 +75,20 @@ serve(async (req) => {
       ? `\nEste é uma FATURA DE CARTÃO DE CRÉDITO do banco ${bank || 'desconhecido'}. Todas as compras são negativas.`
       : `\nEste é um EXTRATO BANCÁRIO do banco ${bank || 'desconhecido'}.`
 
+    // Limpa o texto no servidor também (defesa em profundidade)
+    const cleanText = text_data
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .slice(0, 48000) // ~12k tokens — deixa margem para o JSON de resposta
+
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+      max_tokens: 8192, // era 4096 — extratos grandes truncavam o JSON no meio
       system: SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
-          content: `${contextHint}\n\nTexto do documento:\n\n${text_data.slice(0, 40000)}`,
+          content: `${contextHint}\n\nTexto do documento:\n\n${cleanText}`,
         },
       ],
     })
@@ -94,7 +100,7 @@ serve(async (req) => {
     const { transactions } = JSON.parse(jsonMatch[0])
     if (!Array.isArray(transactions)) throw new Error('Formato inválido')
 
-    // Inserir transações
+    // Inserir em batches de 50 (evita timeout do Supabase em extratos grandes)
     const rows = transactions.map(t => ({
       user_id,
       description: t.description,
@@ -107,8 +113,11 @@ serve(async (req) => {
       metadata: t.metadata || {},
     }))
 
-    const { error: insertError } = await supabase.from('transactions').insert(rows)
-    if (insertError) throw insertError
+    const BATCH = 50
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const { error: insertError } = await supabase.from('transactions').insert(rows.slice(i, i + BATCH))
+      if (insertError) throw insertError
+    }
 
     // Registrar arquivo importado
     if (file_name) {
