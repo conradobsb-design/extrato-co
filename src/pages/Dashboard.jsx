@@ -14,6 +14,7 @@ import { useApp } from '../contexts/AppContext'
 import { useTransactions } from '../hooks/useTransactions'
 import { useGoals } from '../hooks/useGoals'
 import { useStreak } from '../hooks/useStreak'
+import { useMonthlyHistory } from '../hooks/useMonthlyHistory'
 import { formatCurrency, monthLabel, CATEGORY_COLORS, CATEGORY_EMOJI } from '../utils/categories'
 import TransactionList from '../components/TransactionList'
 import GoalCard from '../components/GoalCard'
@@ -59,7 +60,7 @@ function SummaryCard({ icon, label, value, sub, color = 'text-white', trend }) {
         )}
       </div>
       <p className="text-xs text-white/40 mt-2">{label}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
+      <p className={`text-2xl font-display font-bold tracking-tight ${color}`}>{value}</p>
       {sub && <p className="text-xs text-white/30">{sub}</p>}
     </motion.div>
   )
@@ -110,28 +111,28 @@ function CategoryBreakdown({ transactions }) {
 }
 
 function MonthlyBarChart({ userId, currentMonth }) {
-  const months = useMemo(() => {
-    const list = []
-    let m = currentMonth
-    for (let i = 0; i < 6; i++) {
-      list.unshift(m)
-      m = prevMonth(m)
-    }
-    return list
-  }, [currentMonth])
+  const { data, loading } = useMonthlyHistory(userId, currentMonth)
 
-  // Simplified: show bars from current transactions only for now
-  // Real implementation would fetch all 6 months
-  const data = months.map(mo => ({
-    name: monthLabel(mo),
-    month: mo,
+  const chartData = data.map(d => ({
+    name: monthLabel(d.month).slice(0, 3),
+    Receita: d.income,
+    Despesas: d.expenses,
   }))
+
+  if (loading) {
+    return (
+      <div className="card">
+        <p className="text-sm font-semibold mb-4 text-white/70">Histórico mensal</p>
+        <div className="h-[120px] animate-pulse bg-white/5 rounded-xl" />
+      </div>
+    )
+  }
 
   return (
     <div className="card">
       <p className="text-sm font-semibold mb-4 text-white/70">Histórico mensal</p>
       <ResponsiveContainer width="100%" height={120}>
-        <BarChart data={data} barSize={20}>
+        <BarChart data={chartData} barSize={16} barGap={2}>
           <XAxis dataKey="name" tick={{ fill: '#ffffff40', fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis hide />
           <Tooltip
@@ -139,8 +140,8 @@ function MonthlyBarChart({ userId, currentMonth }) {
             labelStyle={{ color: '#fff' }}
             formatter={v => formatCurrency(v)}
           />
-          <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesas" />
-          <Bar dataKey="income" fill="#22c55e" radius={[4, 4, 0, 0]} name="Receita" />
+          <Bar dataKey="Receita" fill="#22c55e" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -357,7 +358,7 @@ export default function Dashboard() {
       {/* ── Modals ── */}
       {showImport && (
         <StatementImport
-          onSuccess={() => { refetch(); setShowImport(false) }}
+          onSuccess={() => refetch()}
           onClose={() => setShowImport(false)}
         />
       )}

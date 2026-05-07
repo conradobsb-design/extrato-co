@@ -94,12 +94,12 @@ export default function StatementImport({ onSuccess, onClose }) {
         }),
       })
 
-      if (!res.ok) {
-        const msg = await res.text()
-        throw new Error(msg || `Erro ${res.status}`)
+      const json = await res.json()
+
+      if (!res.ok || json.error) {
+        throw new Error(json.error || `Erro ${res.status}`)
       }
 
-      const json = await res.json()
       setResult(json)
       setStage('done')
       onSuccess?.()
