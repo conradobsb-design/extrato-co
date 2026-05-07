@@ -57,7 +57,6 @@ serve(async (req) => {
     const client = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { db: { schema: 'app' } },
     )
 
     const repo = createSummaryRepository(client)
